@@ -1,0 +1,426 @@
+<html>
+<canvas id ="gameCanvas" width = "800" height = "600"></canvas>
+<script type="text/javascript" src="./engine.js"></script>
+<script type="text/javascript">
+"use strict";
+
+var width = window.innerWidth,
+	height = window.innerHeight,
+	canvas = document.getElementById('gameCanvas');
+
+var canvasContext,
+    mouseObj,
+    mouseX,
+    mouseY;
+var objectList = [];
+
+var rectCount = 25;
+var circleCount = 25;
+var objectMaxDim = 30;
+var objectMinDim = 20;
+var objectMinDD = 1;
+var objectMaxDD = 3;
+
+var quadTree;
+
+var lastFrame = new Date(),
+	currentFrame,
+	dt;
+window.onload = function(){
+	canvasContext = canvas.getContext('2d');
+
+	drawBackground();
+	canvas.addEventListener("click", handleClick, false);
+    canvas.addEventListener("mousemove", calcMousePos, false);
+	init();
+}
+
+function init(){
+    //dynamic object - stuck to mouse
+    mouseObj = new RectObject(0, 0, 30, 30, 45, 0, 0,'green');
+	//mouseObj = new CircleObject(0, 0, 20, 0, 0, 'green');
+
+
+    createObjects();
+    setInterval(gameLoop, 1000/30);
+}
+
+function gameLoop(){
+	currentFrame = new Date();
+	dt = currentFrame - lastFrame;
+	lastFrame = currentFrame;
+    checkCollisions();
+	updateObjects();
+    drawBackground();
+	drawObjects();
+
+}
+
+function updateObjects(){
+	mouseObj.x = mouseX;
+	mouseObj.y = mouseY;
+	for (var i = 0; i < objectList.length; i++){
+		var obj = objectList[i];
+		obj.move();
+	}
+
+}
+function checkCollisions(){
+    quadTree = new QuadTree(0, canvas.width, 0, canvas.height, 4, 6, -1);
+    sortObjects();
+
+	//dynamic against others
+	var returnObjects = [];
+	returnObjects = quadTree.retrieve(returnObjects, mouseObj);
+	checkCollisionsNarrow(mouseObj, returnObjects);
+
+
+	for (var i = 0; i < objectList.length; i++){
+		var obj1 = objectList[i];
+		returnObjects = [];
+		returnObjects = quadTree.retrieve(returnObjects, obj1);
+        checkCollisionsNarrow(obj1, returnObjects);
+	}
+}
+
+/*
+functions bruteforce(){
+    for (var i = 0; i < objectList.length; i++){
+        var obj1 = objectList[i];
+        for (var j = 0; j < objectList.length; j++){
+            var obj2 = objectList[j];
+            if(obj1==obj2){
+            continue;
+            }
+
+        }
+    }
+}
+*/
+
+function checkCollisionsNarrow(obj1, returnObjects){
+    for (var i = 0; i < returnObjects.length; i++){
+		var obj2 = returnObjects[i];
+        if (obj1 == obj2){
+            continue;
+        }
+
+        var coll = false;
+        if (obj2.radius){
+
+            if (obj1.radius){
+                coll = circleOnCircle(obj1, obj2);
+            }
+            else{
+                coll = circleOnRect(obj2, obj1);
+            }
+        }
+        else{
+            if (obj1.radius){
+                coll = circleOnRect(obj1, obj2);
+            }
+            else{
+                coll = rectOnRect(obj1, obj2);
+            }
+        }
+        if (coll){
+            obj2.hit();
+            obj1.hit();
+        }
+	}
+
+}
+
+function drawObjects(){
+	mouseObj.draw();
+	for (var i = 0; i < objectList.length; i++){
+		var obj = objectList[i];
+		obj.draw();
+	}
+    quadTree.draw();
+}
+function calcMousePos(evt){
+	var rect = canvas.getBoundingClientRect(),
+        root = document.documentElement;
+
+	mouseX = evt.pageX - rect.left - root.scrollLeft;
+	mouseY = evt.pageY - rect.top - root.scrollTop;
+}
+
+function createObjects(){
+	for(var i = 0; i < rectCount; i++){
+		var w = getRandomIntInRange(objectMinDim, objectMaxDim);
+		var h = getRandomIntInRange(objectMinDim, objectMaxDim);
+		var x = getRandomIntInRange(0, canvas.width);
+		var y = getRandomIntInRange(0, canvas.height);
+		var dd = getRandomIntInRange(objectMinDD, objectMaxDD);
+		var rhat = getRandomIntInRange(0, 359);
+		var obj = new RectObject(x, y, w, h, 0, dd, rhat, 'blue');
+		objectList.push(obj);
+	}
+	for(var i = 0; i < circleCount; i++){
+		var r = getRandomIntInRange(objectMinDim, objectMaxDim);
+		var x = getRandomIntInRange(0, canvas.width);
+		var y = getRandomIntInRange(0, canvas.height);
+		var dd = getRandomIntInRange(objectMinDD, objectMaxDD);
+		var rhat = getRandomIntInRange(0, 359);
+		var obj = new CircleObject(x, y, r, dd, rhat, 'blue');
+		objectList.push(obj);
+	}
+}
+
+function sortObjects(){
+
+    quadTree.clear();
+
+	quadTree.insert(mouseObj);
+    for (var i = 0; i < objectList.length; i++){
+        var obj = objectList[i];
+        obj.colliding = false;
+        quadTree.insert(obj);
+	}
+    mouseObj.colliding = false;
+}
+function drawBackground(){
+	canvasContext.fillStyle = 'black';
+	canvasContext.fillRect(0,0,canvas.width,canvas.height);
+}
+
+
+function handleClick(evt){
+    var returnObjects = [];
+	returnObjects = quadTree.retrieve(returnObjects, mouseObj);
+    console.log(returnObjects);
+}
+class GameObject {
+	constructor(x, y, dd, angleDir, color){
+		this.x = x;
+		this.y = y;
+        this.color = color;
+        this.basecolor = color;
+		this.colliding = false;
+		this.dd = dd;
+		this.rhat = this.getDir(angleDir);
+	}
+	hit(){
+		this.colliding = true;
+	}
+	move(){
+		var newPos = {x: this.x + this.dd * this.rhat.x, y: this.y + this.dd * this.rhat.y};
+		var newPos = this.checkCoords(newPos.x, newPos.y);
+		this.x = newPos.x;
+		this.y = newPos.y;
+	}
+	checkCoords(_x, _y){
+		var hit = false;
+		if (_x < 0){
+			if (this.rhat.x < 0){
+					this.rhat.x = -this.rhat.x;
+			}
+			_x = this.x + this.dd * this.rhat.x;
+			hit = true;
+		}
+		else if(_x > canvas.width){
+			if (this.rhat.x > 0){
+					this.rhat.x = -this.rhat.x;
+			}
+			_x = this.x + this.dd * this.rhat.x;
+			hit = true;
+		}
+		if (_y < 0){
+			if (this.rhat.y < 0){
+					this.rhat.y = -this.rhat.y;
+			}
+			_y = this.y + this.dd * this.rhat.y;
+			hit = true;
+		}
+		else if(_y > canvas.height){
+			if (this.rhat.y > 0){
+					this.rhat.y = -this.rhat.y;
+			}
+			_y = this.y + this.dd * this.rhat.y;
+			hit = true;
+		}
+		return {x:_x, y:_y};
+	}
+	getDir(theta){
+		var _x = Math.cos(theta * Math.PI/180);
+		var _y = Math.cos(theta * Math.PI/180);
+		var d  = Math.sqrt(Math.pow(_x,2) + Math.pow(_y,2)); //ask Jake
+		_x = _x/d;
+		_y = _y/d;
+		return {x:_x, y:_y}; // normalized
+	}
+}
+
+class RectObject extends GameObject{
+	constructor(x, y, width, height, angle, dd, angleDir, color){
+		super(x, y, dd, angleDir, color);
+		this.width = width;
+		this.height = height;
+		this.angle = angle;
+	}
+	draw(){
+        if(this.colliding){
+            this.color = 'red';
+        }
+        else{
+            this.color = this.basecolor;
+        }
+		canvasContext.save();
+		canvasContext.translate(this.x, this.y);
+		canvasContext.rotate(this.angle*Math.PI/180);
+		canvasContext.fillStyle = this.color;
+		canvasContext.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+		canvasContext.restore();
+	}
+}
+class CircleObject extends GameObject{
+	constructor(x, y, radius, dd, angleDir, color){
+		super(x, y, dd, angleDir, color);
+		this.radius = radius;
+	}
+	draw(){
+		if(this.colliding){
+			this.color = 'red';
+		}
+		else{
+			this.color = this.basecolor;
+		}
+		canvasContext.save();
+		canvasContext.beginPath();
+		canvasContext.fillStyle = this.color;
+		canvasContext.arc(this.x, this.y, this.radius, 0, Math.PI*2, true);
+		canvasContext.fill();
+		canvasContext.restore();
+	}
+}
+
+class QuadTree {
+	constructor(minX, maxX, minY, maxY, maxDepth, maxChildren, level){
+		this.maxDepth = maxDepth;
+		this.maxChildren = maxChildren;
+		this.minX    = minX;
+		this.maxX    = maxX;
+		this.minY    = minY;
+		this.maxY    = maxY;
+		this.width   = maxX - minX;
+		this.height  = maxY - minY;
+		this.level   = level;
+		this.nodes   = [];
+		this.objects = [];
+
+	}
+	clear(){
+		this.objects = [];
+
+		for (var i = 0; i < this.nodes.length; i++){
+			if (this.nodes[i] != null){
+				this.nodes[i].clear();
+				this.nodes[i] = null;
+			}
+		}
+	}
+	draw(){
+		canvasContext.save();
+		canvasContext.translate(this.minX, this.minY);
+		canvasContext.beginPath();
+		canvasContext.lineWidth = "6";
+		canvasContext.strokeStyle = "blue";
+		canvasContext.rect(0, 0, this.width, this.height);
+		canvasContext.stroke();
+		canvasContext.restore();
+
+		for (var i = 0; i < this.nodes.length; i++){
+			if (this.nodes[i] != null){
+				this.nodes[i].draw();
+			}
+		}
+	}
+	splitNode(){
+		var subWidth  = Math.floor((this.width)/2);
+		var subHeight = Math.floor((this.height)/2);
+
+		this.nodes.push(new QuadTree(this.minX, this.minX + subWidth, this.minY, this.minY + subHeight, this.maxDepth, this.maxChildren, this.level + 1));
+		this.nodes.push(new QuadTree(this.minX + subWidth, this.maxX, this.minY, this.minY + subHeight, this.maxDepth, this.maxChildren, this.level + 1));
+		this.nodes.push(new QuadTree(this.minX, this.minX + subWidth, this.minY + subHeight, this.maxY, this.maxDepth, this.maxChildren, this.level + 1));
+		this.nodes.push(new QuadTree(this.minX + subWidth, this.maxX, this.minY + subHeight, this.maxY, this.maxDepth, this.maxChildren, this.level + 1));
+	}
+	getIndex(obj){
+		var index = -1;
+		var horizontalMidpoint = this.minX + this.width/2;
+		var verticalMidpoint   = this.minY + this.height/2;
+
+		if (obj.x > this.minX && obj.x + obj.width < horizontalMidpoint){
+			var leftQuadrant = true;
+		}
+		if (obj.x + obj.width < this.maxX && obj.x > horizontalMidpoint){
+			var rightQuadrant = true;
+		}
+
+		if (obj.y > this.minY && obj.y + obj.height < verticalMidpoint){
+			if (leftQuadrant){
+				index = 0;
+			}
+			else if (rightQuadrant){
+				index = 1;
+			}
+		}
+		else if (obj.y + obj.width < this.maxY && obj.y > verticalMidpoint){
+			if (leftQuadrant){
+				index = 2;
+			}
+			else if (rightQuadrant){
+				index = 3;
+			}
+		}
+		return index;
+	}
+
+	insert(obj){
+		if (this.nodes[0] != null){
+			var index = this.getIndex(obj);
+			if (index != -1){
+				this.nodes[index].insert(obj);
+
+				return;
+			}
+		}
+		this.objects.push(obj);
+
+		if (this.objects.length > this.maxChildren && this.level < this.maxDepth){
+			if (this.nodes[0] == null){
+				this.splitNode();
+			}
+
+			var i = 0;
+			while(i < this.objects.length){
+				var index = this.getIndex(this.objects[i]);
+				if (index != -1){
+					this.nodes[index].insert(this.objects[i]);
+					this.objects.splice(i, 1);
+				}
+				else{
+					i++;
+				}
+			}
+		}
+	}
+	retrieve(returnObjects, obj){
+		var index = this.getIndex(obj);
+        //console.log(this.nodes[0]);
+
+		if (index != -1 && this.nodes[0] != null){
+			this.nodes[index].retrieve(returnObjects, obj);
+		}
+        returnObjects.push.apply(returnObjects, this.objects);
+		return returnObjects;
+	}
+}
+
+//------utils------//
+function getRandomIntInRange(min, max){
+	return Math.floor(Math.random() * (max-min) + min);
+}
+</script>
+</html>
