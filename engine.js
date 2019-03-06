@@ -109,7 +109,7 @@ class GridNode{
     }
     update(){
         this.angle = noise.simplex3(this.indX / 40, this.indY / 40, timeFactor) * Math.PI * 2;
-        this.length = noise.simplex3(this.indX / 60, this.indY / 60 + 40000, timeFactor); //0-1
+        this.length = noise.simplex3(this.indX / 50, this.indY / 50 + 40000, timeFactor); //0-1
     }
     draw(){
         canvasContext.save();
@@ -137,8 +137,7 @@ class Particle {
         node = grid.getNodeFromLocation(this.position.x, this.position.y);
         //Update acceleration. Zero out if off screen.
         if (node != null){
-            accel = rotateVector(0, accelContributionFromField * node.length, node.angle, false);
-            this.acceleration = addVector(this.acceleration, accel);
+            this.acceleration = rotateVector(0, accelContributionFromField * node.length, node.angle, false);
         }
         else{
             this.acceleration = magnifyVector(this.acceleration, 0);
@@ -170,7 +169,6 @@ class Particle {
     }
 
     draw(){
-        canvasContext.fillStyle = 'black';
         canvasContext.fillRect(this.position.x, this.position.y, this.size, this.size);
     }
 }
