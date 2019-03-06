@@ -21,7 +21,7 @@ class Grid {
             var rowArray = [];
             for (var j = 0; j < this.rows; j++){
                 var yLoc = this.gridSpacing.y/2 + this.gridSpacing.y * j;
-                var node = new GridNode(xLoc, yLoc, this.gridSpacing.x, this.gridSpacing.y, i, j);
+                var node = new GridNode(xLoc, yLoc, i, j);
                 rowArray.push(node);
             }
             this.elem.push(rowArray);
@@ -100,19 +100,16 @@ class Grid {
 }
 
 class GridNode{
-    constructor(x, y, width, height, indX, indY){
+    constructor(x, y, indX, indY){
         this.x = x;
         this.y = y;
         this.indX = indX;
         this.indY = indY;
-        this.width = width;
-        this.height = height;
-        this.angle = noise.simplex3(this.indX / 50, this.indY / 50, timeFactor) * Math.PI * 2;
-        this.length = noise.simplex3(this.indX / 100, this.indY / 100 + 40000, timeFactor);
+        this.update();
     }
     update(){
-        this.angle = noise.simplex3(this.indX / 50, this.indY / 50, timeFactor) * Math.PI * 2;
-        this.length = noise.simplex3(this.indX / 100, this.indY / 100 + 40000, timeFactor);
+        this.angle = noise.simplex3(this.indX / 40, this.indY / 40, timeFactor) * Math.PI * 2;
+        this.length = noise.simplex3(this.indX / 60, this.indY / 60 + 40000, timeFactor); //0-1
     }
     draw(){
         canvasContext.save();
@@ -121,117 +118,113 @@ class GridNode{
         canvasContext.rotate(this.angle);
         canvasContext.beginPath();
         canvasContext.moveTo(0, 0);
-        canvasContext.lineTo(0, this.width * this.length);
+        canvasContext.lineTo(0, gridSpacing * this.length);
         canvasContext.stroke();
         canvasContext.restore();
     }
 }
-function circleOnCircle(circleA, circleB){
-    var distsq = getDistanceSq(circleA.x, circleA.y, circleB.x, circleB.y);
-    if (distsq <= Math.pow(circleA.radius + circleB.radius, 2)){
-        return true;
-    }
-    return false;
-}
 
-function circleOnRect(circleA, rectB){
-    var vertices = getRectVertices(rectB);
-
-    if(pointInRect(circleA.x, circleA.y, vertices)){
-        return true;
-    }
-    if(lineIntersectCircle(circleA, vertices[0], vertices[1]) ||
-       lineIntersectCircle(circleA, vertices[1], vertices[2]) ||
-       lineIntersectCircle(circleA, vertices[2], vertices[3]) ||
-       lineIntersectCircle(circleA, vertices[3], vertices[0])){
-        return true;
+class Particle {
+    constructor(x, y, size){
+        this.size = size;
+        this.position = {x: x, y: y};
+        this.velocity = {x: Math.random()*2 - 1, y: Math.random()*2 - 1};
+        this.acceleration = {x: 0, y: 0};
     }
 
-    for (var i = 0; i < vertices.length; i++){
-        var distsq = getDistanceSq(circleA.x, circleA.y, vertices[i].x, vertices[i].y);
-        if (distsq < Math.pow(circleA.radius, 2)){
-            return true;
+    update(dt){
+        var node, accel, vel, speed, dir;
+        node = grid.getNodeFromLocation(this.position.x, this.position.y);
+        //Update acceleration. Zero out if off screen.
+        if (node != null){
+            accel = rotateVector(0, accelContributionFromField * node.length, node.angle, false);
+            this.acceleration = addVector(this.acceleration, accel);
+        }
+        else{
+            this.acceleration = magnifyVector(this.acceleration, 0);
+        }
+        //Update velocity
+        this.velocity = addVector(this.velocity, this.acceleration);
+        vel = getMagnitudeAndDirection(this.velocity);
+        speed = vel.magnitude;
+        dir = vel.direction;
+        if (speed > velocityCapSq){
+            speed = velocityCap;
+            this.velocity = magnifyVector(dir, speed);
+        }
+        this.position = addVector(this.position, this.velocity);
+        this.maybeWrap();
+    }
+
+    maybeWrap(){
+        if(this.position.x > canvas.width) {
+            this.position.x = 0;
+        } else if(this.position.x < -this.size) {
+            this.position.x = canvas.width - 1;
+        }
+        if(this.position.y > canvas.height) {
+            this.position.y = 0;
+        } else if(this.position.y < -this.size) {
+            this.position.y = canvas.height - 1;
         }
     }
-    return false;
-}
 
-function rectOnRect(rectA, rectB){
-    var verticesA = getRectVertices(rectA);
-    var verticesB = getRectVertices(rectB);
-
-    for (var i = 0; i < verticesA.length; i++){
-        if(pointInRect(verticesA[i].x,verticesA[i].y,verticesB)){
-            return true;
-        }
+    draw(){
+        canvasContext.fillStyle = 'black';
+        canvasContext.fillRect(this.position.x, this.position.y, this.size, this.size);
     }
-    for (var i = 0; i < verticesB.length; i++){
-        if(pointInRect(verticesB[i].x,verticesB[i].y,verticesA)){
-            return true;
-        }
+}
+
+function checkAABB(objA, objB){
+    if ((objA.x - objA.size / 2) > (objB.x + objB.size / 2)){
+        return false;
     }
-    return false;
-}
-function getRectVertices(rect){
-    var vertices = [];
-    //set up relative vertices
-    var a = {x:-rect.width/2, y: -rect.height/2},
-        b = {x:rect.width/2, y: -rect.height/2},
-        c = {x:rect.width/2, y: rect.height/2},
-        d = {x:-rect.width/2, y: rect.height/2};
-    vertices.push(a, b, c, d);
-    var cos = Math.cos(rect.angle * Math.PI/180);
-    var sin = Math.sin(rect.angle * Math.PI/180);
-
-    var tempX, tempY;
-    for (var i = 0; i < vertices.length; i++){
-        var vert = vertices[i];
-        tempX = vert.x * cos - vert.y * sin;
-        tempY = vert.x * sin + vert.y * cos;
-        vert.x = rect.x + tempX;
-        vert.y = rect.y + tempY;
+    if ((objA.y - objA.size / 2) > (objB.y + objB.size / 2)){
+        return false;
     }
-    return vertices;
+    return true;
 }
 
-function pointInRect(x, y, vertices){
-    var ap = {x:x-vertices[0].x,y:y-vertices[0].y};
-    var ab = {x:vertices[1].x - vertices[0].x, y:vertices[1].y - vertices[0].y};
-    var ad = {x:vertices[3].x - vertices[0].x, y:vertices[3].y - vertices[0].y};
-
-	var dotW = dotProduct(ap, ab);
-	var dotH = dotProduct(ap, ad);
-	if ((0 <= dotW) && (dotW <= dotProduct(ab, ab)) && (0 <= dotH) && (dotH <= dotProduct(ad, ad))){
-		return true;
-	}
-    return false;
-}
-
-function lineIntersectCircle(circle, a, b){
-
-    var ap, ab, dirAB, magAB, projMag, perp, perpMag;
-    ap = {x: circle.x - a.x, y: circle.y - a.y};
-    ab = {x: b.x - a.x, y: b.y - a.y};
-    magAB = Math.sqrt(dotProduct(ab,ab));
-    dirAB = {x: ab.x/magAB, y: ab.y/magAB};
-
-    projMag = dotProduct(ap, dirAB);
-
-    perp = {x: ap.x - projMag*dirAB.x, y: ap.y - projMag*dirAB.y};
-    perpMag = Math.sqrt(dotProduct(perp, perp));
-    if ((0 < perpMag) && (perpMag < circle.radius) && (0 <  projMag) && (projMag < magAB)){
-        return true;
+function rotateVector(xi, yi, theta, degrees){
+    //Rotate a vector by theta (-theta == CW, +theta == CCW)
+    //returns a vector (vector.x, vector.y)
+    if (degrees){
+        theta *= Math.PI/180;
     }
-    return false;
-}
-function getDistance(x1, y1, x2, y2){
-    return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1, 2));
+    return {x: xi * Math.cos(theta) - yi * Math.sin(theta), 
+            y: xi * Math.sin(theta) + yi * Math.cos(theta)};
 }
 
-function getDistanceSq(x1, y1, x2, y2){
-    return Math.pow(x2-x1,2) + Math.pow(y2-y1, 2);
+function getMagnitudeAndDirection(vector){
+    var magnitude = getVectorMag(vector);
+    return {direction: {x: vector.x / magnitude, y: vector.y / magnitude}, magnitude: magnitude};
+}
+function normalizeVector(vector){
+    var magnitude = getVectorMag(vector);
+    return {x: vector.x / magnitude, y: vector.y / magnitude};
 }
 
-function dotProduct(a, b){
-    return a.x * b.x + a.y * b.y;
+function addVector(vector1, vector2){
+    return {x: vector1.x + vector2.x, y: vector1.y + vector2.y};
 }
+
+function magnifyVector(vector, scalar){
+    return {x: vector.x * scalar, y: vector.y * scalar};
+}
+function getVectorMag(vector){
+    return Math.sqrt(Math.pow(vector.x,2) + Math.pow(vector.y,2));
+}
+
+function getDistance(vector1, vector2){
+    return Math.sqrt(getDistanceSq(vector1, vector2));
+}
+
+function getDistanceSq(vector1, vector2){
+    return Math.pow(vector2.x - vector1.x, 2) + Math.pow(vector2.y - vector1.y, 2);
+}
+
+function dotProduct(vector1, vector2){
+    return vector1.x * vector2.x + vector1.y * vector2.y;
+}
+
+

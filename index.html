@@ -26,6 +26,7 @@ body {
 </style>
 <div class='centerbox'><canvas></canvas></div>
 <script type="text/javascript" src="perlin.js"></script>
+<script type="text/javascript" src="dat.gui.min.js"></script>
 <script type="text/javascript" src="engine.js"></script>
 <script type="text/javascript">
 "use strict";
@@ -33,6 +34,14 @@ body {
 var canvas,
     canvasContext,
     grid,
+    gridSpacing = 20,
+    gui,
+    params,
+    particleCount,
+    particles,
+    accelContributionFromField = 30,
+    velocityCap = 3,
+    velocityCapSq = velocityCap * velocityCap,
 
     currentFrame,
     lastFrame,
@@ -45,41 +54,63 @@ window.onload = function(){
     canvas.width = 1024;
     canvas.height = 760;
     canvasContext = canvas.getContext('2d');
+    gui = new dat.GUI();
+    params = {dt: dtMax};
     init();
 }
 
+function initializeGUI(){
+    //gui.add(params, 'dt', 0, 100).listen();
 
+}
 function init(){
     //Initialization
     timeFactor = 0;
     noise.seed(Math.random());
-    grid = new Grid(Math.floor(canvas.width / 20), Math.floor(canvas.height / 20), canvas.width, canvas.height);
+    grid = new Grid(Math.floor(canvas.height / gridSpacing), Math.floor(canvas.width / gridSpacing), canvas.width, canvas.height);
+    initializeParticles();
 
     drawBackground('white');
     requestAnimationFrame(main);
 }
 
-
+function initializeParticles(){
+    particleCount = canvas.width * canvas.height / 1000;
+    particles = [];
+    for (var i = 0; i < particleCount; i ++){
+        var particle = new Particle(Math.random() * canvas.width, Math.random() * canvas.height, 8);
+        particles.push(particle);
+    }
+}
 
 function main(){
     currentFrame = new Date();
     dt = (currentFrame - lastFrame) / 1000.0;
     dt = (dt < dtMax)? dt : dtMax; //cap dt in the event of tabbing away
     lastFrame = currentFrame;
-    timeFactor += 0.004;
-    update();
+    timeFactor += 0.001;
+    update(dt);
     draw();
     requestAnimationFrame(main);
 }
 
-function update(){
-    //Update particles by field
+function update(dt){
+    //Update field and particles
     grid.update();
+    updateParticles(dt);
+}
+
+function updateParticles(dt){
+    for (var i = 0; i < particleCount; i++){
+        //FIX add to quadtree
+        particles[i].update(dt);
+    }
 }
 
 function draw(){
     drawBackground('white');
     grid.draw();
+    drawParticles();
 }
 
 function drawBackground(color){
@@ -87,6 +118,11 @@ function drawBackground(color){
     canvasContext.fillStyle = color;
     canvasContext.fillRect(0,0,canvas.width, canvas.height);
     canvasContext.restore();
+}
+function drawParticles(){
+    for (var i = 0; i < particleCount; i++){
+        particles[i].draw();
+    }
 }
 /*
 var image = canvasContext.createImageData(canvas.width, canvas.height);
