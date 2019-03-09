@@ -44,6 +44,7 @@ var canvas,
     velocityCap = 1.5,
     velocityCapSq = velocityCap * velocityCap,
     hue = 0,
+    playbackPaused = false,
 
     currentFrame,
     lastFrame,
@@ -113,6 +114,9 @@ function main(){
     timeFactor += 0.004;
     update(dt);
     draw();
+    if (playbackPaused){
+    	return;
+    }
     requestAnimationFrame(main);
 }
 
