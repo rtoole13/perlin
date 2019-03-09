@@ -108,8 +108,8 @@ class GridNode{
         this.update();
     }
     update(){
-        this.angle = noise.simplex3(this.indX / 40, this.indY / 40, timeFactor) * Math.PI * 2;
-        this.length = noise.simplex3(this.indX / 50, this.indY / 50 + 40000, timeFactor); //0-1
+        this.angle = noise.simplex3(this.indX / fieldAngleFactorX, this.indY / fieldAngleFactorY, timeFactor) * Math.PI * 2;
+        this.length = noise.simplex3(this.indX / fieldMagnitudeFactorX, this.indY / fieldMagnitudeFactorY + 40000, timeFactor); //0-1
     }
     draw(){
         canvasContext.save();

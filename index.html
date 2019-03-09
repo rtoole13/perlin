@@ -44,6 +44,11 @@ var canvas,
     velocityCap = 1.5,
     velocityCapSq = velocityCap * velocityCap,
     hue = 0,
+    fieldAngleFactorX = 40,
+    fieldAngleFactorY = 40,
+    fieldMagnitudeFactorX = 50,
+    fieldMagnitudeFactorY = 50,
+    fieldTimeFactor = 0.004,
     playbackPaused = false,
 
     currentFrame,
@@ -95,6 +100,7 @@ function removeParticles(count){
 
 function reset(){
 	//Initialization
+    playbackPaused = false;
     timeFactor = 0;
     noise.seed(Math.random());
     grid = new Grid(Math.floor(canvas.height / gridSpacing), Math.floor(canvas.width / gridSpacing), canvas.width, canvas.height);
@@ -111,7 +117,7 @@ function main(){
 
 
     lastFrame = currentFrame;
-    timeFactor += 0.004;
+    timeFactor += fieldTimeFactor;
     update(dt);
     draw();
     if (playbackPaused){

@@ -15,10 +15,19 @@ function updateParticleVelocityCap(){
     velocityCap = params.maxVelocity;
     velocityCapSq = velocityCap * velocityCap;
 }
+
 function updateFieldFactor(){
 	accelContributionFromField = params.fieldFactor;
 }
 
+//Field
+function updateFieldParameters(){
+	fieldAngleFactorX = params.angleVolatilityX;
+	fieldAngleFactorY = params.angleVolatilityY;
+	fieldMagnitudeFactorX = params.magnitudeVolatilityX;
+	fieldMagnitudeFactorY = params.magnitudeVolatilityY;
+	fieldTimeFactor = params.timeFactor / 1000;
+}
 //General
 function pause(){
 	if (playbackPaused){
@@ -39,6 +48,11 @@ function initializeGUI(){
     		  particleCount: particleCount,
     		  maxVelocity: velocityCap,
     		  fieldFactor: accelContributionFromField,
+    		  angleVolatilityX: fieldAngleFactorX,
+    		  angleVolatilityY: fieldAngleFactorY,
+    		  magnitudeVolatilityX: fieldMagnitudeFactorX,
+    		  magnitudeVolatilityY: fieldMagnitudeFactorY,
+    		  timeFactor: fieldTimeFactor * 1000, 
     		  reset: reset,
     		  pause: pause};
 	gui = new dat.GUI();
@@ -54,6 +68,22 @@ function initializeGUI(){
     
     entry = guiFolderParticles.add(params, 'fieldFactor', 0, 3);
     entry.onChange(updateFieldFactor);
+
+    var guiFolderField = gui.addFolder('Field');
+    entry = guiFolderField.add(params, 'angleVolatilityX', 1, 200).step(1);
+    entry.onChange(updateFieldParameters);
+
+    entry = guiFolderField.add(params, 'angleVolatilityY', 1, 200).step(1);
+    entry.onChange(updateFieldParameters);
+
+    entry = guiFolderField.add(params, 'magnitudeVolatilityX', 1, 200).step(1);
+    entry.onChange(updateFieldParameters);
+
+    entry = guiFolderField.add(params, 'magnitudeVolatilityY', 1, 200).step(1);
+    entry.onChange(updateFieldParameters);
+
+    entry = guiFolderField.add(params, 'timeFactor', 0, 10).step(1);
+    entry.onChange(updateFieldParameters);
 
     gui.add(params, 'reset');
     gui.add(params, 'pause');
