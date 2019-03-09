@@ -28,6 +28,7 @@ body {
 <script type="text/javascript" src="perlin.js"></script>
 <script type="text/javascript" src="dat.gui.min.js"></script>
 <script type="text/javascript" src="engine.js"></script>
+<script type="text/javascript" src="gui.js"></script>
 <script type="text/javascript">
 "use strict";
 
@@ -55,28 +56,22 @@ window.onload = function(){
     canvas.width = 1024;
     canvas.height = 760;
     canvasContext = canvas.getContext('2d');
-    gui = new dat.GUI();
-    params = {dt: dtMax};
     init();
 }
 
-function initializeGUI(){
-    //gui.add(params, 'dt', 0, 100).listen();
-
-}
 function init(){
     //Initialization
     timeFactor = 0;
     noise.seed(Math.random());
     grid = new Grid(Math.floor(canvas.height / gridSpacing), Math.floor(canvas.width / gridSpacing), canvas.width, canvas.height);
     initializeParticles();
-
+    initializeGUI();
     drawBackground(1.0);
     requestAnimationFrame(main);
 }
 
-function initializeParticles(){
-    particleCount = canvas.width * canvas.height / 1000;
+function initializeParticles(count){
+    particleCount = count || Math.floor(canvas.width * canvas.height / 1000); 
     particles = [];
     for (var i = 0; i < particleCount; i ++){
         var particle = new Particle(Math.random() * canvas.width, Math.random() * canvas.height, 2);
@@ -84,12 +79,38 @@ function initializeParticles(){
     }
 }
 
+function addParticles(count){
+	for (var i = 0; i < count; i ++){
+        var particle = new Particle(Math.random() * canvas.width, Math.random() * canvas.height, 2);
+        particles.push(particle);
+    }
+    particleCount += count;
+}
+
+function removeParticles(count){
+	particles.splice(0, count);
+	particleCount -= count;
+}
+
+function reset(){
+	//Initialization
+    timeFactor = 0;
+    noise.seed(Math.random());
+    grid = new Grid(Math.floor(canvas.height / gridSpacing), Math.floor(canvas.width / gridSpacing), canvas.width, canvas.height);
+    initializeParticles(particleCount);
+    drawBackground(1.0);
+    requestAnimationFrame(main);
+}
+
 function main(){
     currentFrame = new Date();
     dt = (currentFrame - lastFrame) / 1000.0;
     dt = (dt < dtMax)? dt : dtMax; //cap dt in the event of tabbing away
+    updateGuiMetrics();
+
+
     lastFrame = currentFrame;
-    timeFactor += 0.001;
+    timeFactor += 0.004;
     update(dt);
     draw();
     requestAnimationFrame(main);
@@ -110,7 +131,7 @@ function updateParticles(dt){
 
 function draw(){
     drawBackground();
-    //grid.draw();
+   	//grid.draw();
     drawParticles();
 }
 
