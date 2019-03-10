@@ -54,7 +54,8 @@ function initializeGUI(){
     		  magnitudeVolatilityY: fieldMagnitudeFactorY,
     		  timeFactor: fieldTimeFactor * 1000, 
     		  reset: reset,
-    		  pause: pause};
+    		  pause: pause,
+    		  saveImage: saveImage};
 	gui = new dat.GUI();
 	var guiFolderMetrics = gui.addFolder('Metrics');
     guiFolderMetrics.add(params, 'fps', 0, 100).listen();
@@ -87,6 +88,7 @@ function initializeGUI(){
 
     gui.add(params, 'reset');
     gui.add(params, 'pause');
+    gui.add(params, 'saveImage');
 
 }
 

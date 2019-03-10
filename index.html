@@ -158,25 +158,8 @@ function drawParticles(){
         particles[i].draw();
     }
 }
-/*
-var image = canvasContext.createImageData(canvas.width, canvas.height);
-var data = image.data;
-var start = Date.now();
-noise.seed(Math.random());
-for (var x = 0; x < canvas.width; x++) {
-    for (var y = 0; y < canvas.height; y++) {
-        var value = Math.abs(noise.simplex3(x / 100, y / 100, 0));
-        value *= 256;
-        var cell = (x + y * canvas.width) * 4;
-       
-        data[cell] = data[cell + 1] = data[cell + 2] = value;
-        data[cell + 3] = 255; // alpha.
-        //data[cell] += Math.max(0, (25 - value) * 8);
-
-    }
+function saveImage(){
+	window.open(canvas.toDataURL('image/png'));
 }
-
-canvasContext.putImageData(image, 0, 0);
-*/
 </script>
 </html>
