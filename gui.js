@@ -5,7 +5,7 @@
 function updateParticleCount(){
 	var diff = params.particleCount - particleCount;
 	if (diff > 0){
-		addParticles(diff);
+		addNewParticles(diff);
 	}
 	else if (diff < 0){
 		removeParticles(Math.abs(diff));
@@ -18,6 +18,10 @@ function updateParticleVelocityCap(){
 
 function updateFieldFactor(){
 	accelContributionFromField = params.fieldFactor;
+}
+
+function updateParticleSpawnParams(){
+	currentParticleSpawnLocation = params.spawnLocation;
 }
 
 //Field
@@ -54,7 +58,9 @@ function initializeGUI(){
     		  magnitudeVolatilityY: fieldMagnitudeFactorY,
     		  timeFactor: fieldTimeFactor * 1000, 
     		  reset: reset,
-    		  pause: pause};
+    		  pause: pause,
+    		  spawnLocation: particleSpawnTypes[0]};
+
 	gui = new dat.GUI();
 	var guiFolderMetrics = gui.addFolder('Metrics');
     guiFolderMetrics.add(params, 'fps', 0, 100).listen();
@@ -68,6 +74,9 @@ function initializeGUI(){
     
     entry = guiFolderParticles.add(params, 'fieldFactor', 0, 3);
     entry.onChange(updateFieldFactor);
+
+    entry = guiFolderParticles.add(params, 'spawnLocation', particleSpawnTypes);
+    entry.onChange(updateParticleSpawnParams);
 
     var guiFolderField = gui.addFolder('Field');
     entry = guiFolderField.add(params, 'angleVolatilityX', 1, 200).step(1);
@@ -83,8 +92,23 @@ function initializeGUI(){
     entry.onChange(updateFieldParameters);
 
     entry = guiFolderField.add(params, 'timeFactor', 0, 10).step(1);
-    entry.onChange(updateFieldParameters);
+    entry.onFinishChange(updateFieldParameters);
 
+    var guiFolderColor = gui.addFolder('Color');
+//----canvas properties
+//adjust box size and canvas size. *enum?
+
+//----draw types
+//draw grid
+//normal
+
+//----color props
+//trail transparency
+//dynamic hue bool
+//dynamic hue rate
+//background color
+//trail "length" dictated by background fill alpha
+//if no dynamic hue, set color
     gui.add(params, 'reset');
     gui.add(params, 'pause');
 }

@@ -74,6 +74,8 @@ var canvas,
     fieldTimeFactor = 0.004,
     playbackPaused = false,
     link, //a element
+    particleSpawnTypes = ['random', 'line', 'points'],
+    currentParticleSpawnLocation = particleSpawnTypes[0],
 
     currentFrame,
     lastFrame,
@@ -108,29 +110,68 @@ function init(){
     timeFactor = 0;
     noise.seed(Math.random());
     grid = new Grid(Math.floor(canvas.height / gridSpacing), Math.floor(canvas.width / gridSpacing), canvas.width, canvas.height);
-    initializeParticles();
+    initializeParticles(Math.floor(canvas.width * canvas.height / 1000));
     initializeGUI();
     drawBackground(1.0);
     requestAnimationFrame(main);
 }
 
 function initializeParticles(count){
-    particleCount = count || Math.floor(canvas.width * canvas.height / 1000); 
+    particleCount = count; 
     particles = [];
-    for (var i = 0; i < particleCount; i ++){
-        var particle = new Particle(Math.random() * canvas.width, Math.random() * canvas.height, 2);
-        particles.push(particle);
-    }
+    addParticles(particleCount);
 }
 
+function addNewParticles(count){
+	addParticles(count);
+	particleCount += count;
+}
 function addParticles(count){
-	for (var i = 0; i < count; i ++){
+	switch(currentParticleSpawnLocation){
+		case 'random':
+			spawnParticlesRandomly(count);
+			break;
+		case 'line':
+			spawnParticlesLine(count);
+			break;
+		case 'points':
+			spawnParticlesPoints(count);
+			break;
+		default:
+			spawnParticlesRandomly(count);	
+			break;
+	}
+}
+function spawnParticlesRandomly(count){
+	for (var i = 0; i < count; i++){
         var particle = new Particle(Math.random() * canvas.width, Math.random() * canvas.height, 2);
         particles.push(particle);
     }
-    particleCount += count;
 }
-
+function spawnParticlesLine(count){
+	for (var i = 0; i < count; i++){
+        var particle = new Particle(i * canvas.width / count, canvas.height / 2, 2);
+        particles.push(particle);
+    }
+}
+function spawnParticlesPoints(count){
+	var pointOne, pointTwo, radiusOne, radiusTwo, split, tempVector;
+	pointOne = {x: canvas.width / 4, y: canvas.height * 5 /6};
+	pointTwo = {x: canvas.width * 4 / 5, y: canvas.height * 1 /3};
+	radiusOne = 50;
+	radiusTwo = 25;
+	split = Math.floor(count * 2 / 3);
+	for (var i = 0; i < split; i++){
+		tempVector = rotateVector(Math.random() * radiusOne, 0, Math.random() * Math.PI * 2, false);
+		var particle = new Particle(pointOne.x + tempVector.x, pointOne.y + tempVector.y, 2);
+		particles.push(particle);
+	}
+	for (var i = split; i < count; i++){
+		tempVector = rotateVector(Math.random() * radiusTwo, 0, Math.random() * Math.PI * 2, false);
+		var particle = new Particle(pointTwo.x + tempVector.x, pointTwo.y + tempVector.y, 2);
+		particles.push(particle);
+	}
+}
 function removeParticles(count){
 	particles.splice(0, count);
 	particleCount -= count;
@@ -196,6 +237,7 @@ function drawParticles(){
         particles[i].draw();
     }
 }
+
 
 </script>
 </html>
