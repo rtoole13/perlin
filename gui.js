@@ -32,6 +32,15 @@ function updateFieldParameters(){
 	fieldMagnitudeFactorY = params.magnitudeVolatilityY;
 	fieldTimeFactor = params.timeFactor / 1000;
 }
+//Color
+function updateBackgroundColor(){
+    currentBackgroundRGB = params.backgroundColor;
+    drawBackground(1);
+}
+
+function updateTrailPersistence(){
+    currentTrailPersistence = params.trailPersistence;
+}
 //General
 function pause(){
 	if (playbackPaused){
@@ -59,7 +68,9 @@ function initializeGUI(){
     		  timeFactor: fieldTimeFactor * 1000, 
     		  reset: reset,
     		  pause: pause,
-    		  spawnLocation: particleSpawnTypes[0]};
+    		  spawnLocation: particleSpawnTypes[0],
+              backgroundColor: currentBackgroundRGB,
+              trailPersistence: currentTrailPersistence};
 
 	gui = new dat.GUI();
 	var guiFolderMetrics = gui.addFolder('Metrics');
@@ -95,6 +106,12 @@ function initializeGUI(){
     entry.onFinishChange(updateFieldParameters);
 
     var guiFolderColor = gui.addFolder('Color');
+    entry = guiFolderColor.addColor(params, 'backgroundColor');
+    entry.onFinishChange(updateBackgroundColor);
+    
+    entry = guiFolderColor.add(params, 'trailPersistence', 0, 1);
+    entry.onChange(updateTrailPersistence);
+
 //----canvas properties
 //adjust box size and canvas size. *enum?
 

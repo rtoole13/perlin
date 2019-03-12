@@ -76,6 +76,8 @@ var canvas,
     link, //a element
     particleSpawnTypes = ['random', 'line', 'points'],
     currentParticleSpawnLocation = particleSpawnTypes[0],
+    currentBackgroundRGB = [255, 255, 255],
+    currentTrailPersistence = 0.001,
 
     currentFrame,
     lastFrame,
@@ -226,7 +228,7 @@ function draw(){
 
 function drawBackground(alpha){
     
-    canvasContext.fillStyle = `rgba(255, 255, 255, ${alpha || 0.001})`;
+    canvasContext.fillStyle = `rgba(${currentBackgroundRGB[0]}, ${currentBackgroundRGB[1]}, ${currentBackgroundRGB[2]}, ${alpha || currentTrailPersistence})`;
     canvasContext.fillRect(0,0,canvas.width, canvas.height);
     
 }
