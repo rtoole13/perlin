@@ -42,6 +42,11 @@ function updateTrailPersistence(){
     currentTrailPersistence = params.trailPersistence;
 }
 //General
+function updateCanvasResolution(){
+	canvas.width = canvasDimensions[params.canvasDimensions][0];
+	canvas.height = canvasDimensions[params.canvasDimensions][1];
+	currentCanvasDimensions = params.canvasDimensions;
+}
 function pause(){
 	if (playbackPaused){
 		playbackPaused = false;
@@ -70,7 +75,8 @@ function initializeGUI(){
     		  pause: pause,
     		  spawnLocation: particleSpawnTypes[0],
               backgroundColor: currentBackgroundRGB,
-              trailPersistence: currentTrailPersistence};
+              trailPersistence: currentTrailPersistence,
+              canvasDimensions: canvasDimKeys[0]};
 
 	gui = new dat.GUI();
 	var guiFolderMetrics = gui.addFolder('Metrics');
@@ -126,6 +132,9 @@ function initializeGUI(){
 //background color
 //trail "length" dictated by background fill alpha
 //if no dynamic hue, set color
+	entry = gui.add(params, 'canvasDimensions', canvasDimKeys);
+	entry.onFinishChange(updateCanvasResolution);
+
     gui.add(params, 'reset');
     gui.add(params, 'pause');
 }
